@@ -5,22 +5,36 @@ import { useState, useEffect } from "react";
 type Producto = {
     id: number;
     nombre: string;
-    descripcion: string;
+    tipo: string;
+    coleccion: string;
+    categoria: string;
     precio: number;
-    stock: number;
-    imagen: string;
+    descripcion: string;
+    detalles: string;
+    imagen_frente: string;
+    imagen_atras: string;
+    codigo: string;
+    producto_relacionado: string;
+};
+
+const formVacio = {
+    nombre: "",
+    tipo: "cartera",
+    coleccion: "valentines-day",
+    categoria: "",
+    precio: "",
+    descripcion: "",
+    detalles: "",
+    imagenFrente: "",
+    imagenAtras: "",
+    codigo: "",
+    productoRelacionado: "",
 };
 
 export default function Admin() {
     const [productos, setProductos] = useState<Producto[]>([]);
     const [editando, setEditando] = useState<Producto | null>(null);
-    const [form, setForm] = useState({
-        nombre: "",
-        descripcion: "",
-        precio: "",
-        stock: "",
-        imagen: "",
-    });
+    const [form, setForm] = useState(formVacio);
 
     const cargarProductos = async () => {
         const res = await fetch("/api/productos");
@@ -32,7 +46,9 @@ export default function Admin() {
         cargarProductos();
     }, []);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (
+        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    ) => {
         setForm({ ...form, [e.target.name]: e.target.value });
     };
 
@@ -41,39 +57,63 @@ export default function Admin() {
 
         const datos = {
             nombre: form.nombre,
-            descripcion: form.descripcion,
+            tipo: form.tipo,
+            coleccion: form.coleccion,
+            categoria: form.categoria,
             precio: Number(form.precio),
-            stock: Number(form.stock),
-            imagen: form.imagen,
+            descripcion: form.descripcion,
+            detalles: form.detalles,
+            imagenFrente: form.imagenFrente,
+            imagenAtras: form.imagenAtras,
+            codigo: form.codigo,
+            productoRelacionado: form.productoRelacionado,
         };
 
+        let res;
         if (editando) {
-            await fetch(`/api/productos/${editando.id}`, {
+            res = await fetch(`/api/productos/${editando.id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(datos),
             });
         } else {
-            await fetch("/api/productos", {
+            res = await fetch("/api/productos", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(datos),
             });
         }
 
-        setForm({ nombre: "", descripcion: "", precio: "", stock: "", imagen: "" });
+        if (!res.ok) {
+            alert("Hubo un error al guardar el producto. Revisá que todos los campos obligatorios estén completos.");
+            return;
+        }
+
+        setForm(formVacio);
         setEditando(null);
         cargarProductos();
     };
 
     const handleEditar = (producto: Producto) => {
         setEditando(producto);
+        let detallesArray: string[] = [];
+        try {
+            detallesArray = JSON.parse(producto.detalles);
+        } catch {
+            detallesArray = [];
+        }
         setForm({
             nombre: producto.nombre,
-            descripcion: producto.descripcion,
+            tipo: producto.tipo,
+            coleccion: producto.coleccion,
+            categoria: producto.categoria || "",
             precio: String(producto.precio),
-            stock: String(producto.stock),
-            imagen: producto.imagen,
+            descripcion: producto.descripcion || "",
+            detalles: detallesArray.join("\n"),
+            imagenFrente: producto.imagen_frente,
+            imagenAtras: producto.imagen_atras,
+            codigo: producto.codigo || "",
+            productoRelacionado: producto.producto_relacionado || "",
         });
     };
 
@@ -83,62 +123,103 @@ export default function Admin() {
         cargarProductos();
     };
 
+    const inputClass =
+        "w-full rounded-md border border-gray-300 px-3 py-2 text-sm";
+
     return (
         <div style={{ maxWidth: "700px", margin: "40px auto", padding: "0 20px", fontFamily: "Arial, sans-serif" }}>
-            <h1>Panel de administración - RYCH</h1>
+            <h1 className="mb-6 text-2xl font-bold">Panel de administración - RYCH</h1>
 
-            <form onSubmit={handleSubmit} style={{ border: "1px solid #ddd", borderRadius: "8px", padding: "20px", marginBottom: "30px" }}>
-                <h2>{editando ? "Editar producto" : "Nuevo producto"}</h2>
+            <form onSubmit={handleSubmit} className="mb-10 rounded-lg border border-gray-200 p-6">
+                <h2 className="mb-4 text-lg font-semibold">{editando ? "Editar producto" : "Nuevo producto"}</h2>
 
-                <label>Nombre</label>
-                <input name="nombre" value={form.nombre} onChange={handleChange} required style={{ width: "100%", padding: "8px", marginBottom: "10px", boxSizing: "border-box" }} />
+                <label className="mt-3 block text-sm font-medium">Nombre</label>
+                <input name="nombre" value={form.nombre} onChange={handleChange} required className={inputClass} />
 
-                <label>Descripción</label>
-                <input name="descripcion" value={form.descripcion} onChange={handleChange} required style={{ width: "100%", padding: "8px", marginBottom: "10px", boxSizing: "border-box" }} />
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div>
+                        <label className="block text-sm font-medium">Tipo</label>
+                        <select name="tipo" value={form.tipo} onChange={handleChange} className={inputClass}>
+                            <option value="cartera">Cartera</option>
+                            <option value="billetera">Billetera</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium">Colección</label>
+                        <select name="coleccion" value={form.coleccion} onChange={handleChange} className={inputClass}>
+                            <option value="valentines-day">Valentine's Day</option>
+                            <option value="daily-essential">Daily Essential</option>
+                        </select>
+                    </div>
+                </div>
 
-                <label>Precio</label>
-                <input name="precio" type="number" value={form.precio} onChange={handleChange} required style={{ width: "100%", padding: "8px", marginBottom: "10px", boxSizing: "border-box" }} />
+                <label className="mt-3 block text-sm font-medium">Categoría (ej: Cartera de hombro)</label>
+                <input name="categoria" value={form.categoria} onChange={handleChange} className={inputClass} />
 
-                <label>Stock</label>
-                <input name="stock" type="number" value={form.stock} onChange={handleChange} required style={{ width: "100%", padding: "8px", marginBottom: "10px", boxSizing: "border-box" }} />
+                <label className="mt-3 block text-sm font-medium">Precio</label>
+                <input name="precio" type="number" value={form.precio} onChange={handleChange} required className={inputClass} />
 
-                <label>Nombre del archivo de imagen (ej: negra.jpg)</label>
-                <input name="imagen" value={form.imagen} onChange={handleChange} required style={{ width: "100%", padding: "8px", marginBottom: "10px", boxSizing: "border-box" }} />
+                <label className="mt-3 block text-sm font-medium">Descripción</label>
+                <textarea name="descripcion" value={form.descripcion} onChange={handleChange} rows={3} className={inputClass} />
 
-                <button type="submit" style={{ padding: "10px 16px", backgroundColor: "#1a1a1a", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
-                    {editando ? "Guardar cambios" : "Agregar producto"}
-                </button>
+                <label className="mt-3 block text-sm font-medium">Detalles (uno por renglón)</label>
+                <textarea
+                    name="detalles"
+                    value={form.detalles}
+                    onChange={handleChange}
+                    rows={4}
+                    placeholder={"Material: Cuero sintético\nColor: Negro\nMedidas: 20x15x8 cm"}
+                    className={inputClass}
+                />
 
-                {editando && (
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setEditando(null);
-                            setForm({ nombre: "", descripcion: "", precio: "", stock: "", imagen: "" });
-                        }}
-                        style={{ marginLeft: "10px", padding: "10px 16px", backgroundColor: "#ccc", border: "none", borderRadius: "4px", cursor: "pointer" }}
-                    >
-                        Cancelar
+                <label className="mt-3 block text-sm font-medium">Nombre del archivo - foto de frente (ej: gamuza.jpg)</label>
+                <input name="imagenFrente" value={form.imagenFrente} onChange={handleChange} required className={inputClass} />
+
+                <label className="mt-3 block text-sm font-medium">Nombre del archivo - foto de dorso</label>
+                <input name="imagenAtras" value={form.imagenAtras} onChange={handleChange} required className={inputClass} />
+
+                <label className="mt-3 block text-sm font-medium">Código (opcional)</label>
+                <input name="codigo" value={form.codigo} onChange={handleChange} className={inputClass} />
+
+                <label className="mt-3 block text-sm font-medium">Producto relacionado (opcional, nombre exacto)</label>
+                <input name="productoRelacionado" value={form.productoRelacionado} onChange={handleChange} className={inputClass} />
+
+                <div className="mt-5">
+                    <button type="submit" className="rounded-md bg-black px-5 py-2 text-sm font-semibold text-white">
+                        {editando ? "Guardar cambios" : "Agregar producto"}
                     </button>
-                )}
+                    {editando && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setEditando(null);
+                                setForm(formVacio);
+                            }}
+                            className="ml-3 rounded-md bg-gray-200 px-5 py-2 text-sm"
+                        >
+                            Cancelar
+                        </button>
+                    )}
+                </div>
             </form>
 
-            <h2>Productos actuales</h2>
+            <h2 className="mb-4 text-lg font-semibold">Productos actuales</h2>
             {productos.map((producto) => (
                 <div
                     key={producto.id}
-                    style={{ display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid #eee", borderRadius: "6px", padding: "10px", marginBottom: "10px" }}
+                    className="mb-3 flex items-center justify-between rounded-md border border-gray-200 p-3"
                 >
-                    <div>
-                        <strong>{producto.nombre}</strong> - ${producto.precio} - Stock: {producto.stock}
+                    <div className="text-sm">
+                        <strong>{producto.nombre}</strong> ({producto.tipo}) - {producto.coleccion} - $
+                        {producto.precio}
                     </div>
                     <div>
-                        <button onClick={() => handleEditar(producto)} style={{ marginRight: "8px", padding: "6px 12px", cursor: "pointer" }}>
+                        <button onClick={() => handleEditar(producto)} className="mr-2 rounded border px-3 py-1 text-sm">
                             Editar
                         </button>
                         <button
                             onClick={() => handleBorrar(producto.id)}
-                            style={{ padding: "6px 12px", backgroundColor: "#c0392b", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}
+                            className="rounded bg-red-600 px-3 py-1 text-sm text-white"
                         >
                             Borrar
                         </button>

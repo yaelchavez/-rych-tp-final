@@ -1,25 +1,53 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
 
-// PUT /api/productos/5 → actualiza el producto con id 5
 export async function PUT(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id } = await params;
     const body = await request.json();
-    const { nombre, descripcion, precio, stock, imagen } = body;
+    const {
+        nombre,
+        tipo,
+        coleccion,
+        categoria,
+        precio,
+        descripcion,
+        detalles,
+        imagenFrente,
+        imagenAtras,
+        codigo,
+        productoRelacionado,
+    } = body;
+
+    const detallesArray = String(detalles || "")
+        .split("\n")
+        .map((linea: string) => linea.trim())
+        .filter((linea: string) => linea.length > 0);
 
     db.prepare(
         `UPDATE productos
-     SET nombre = ?, descripcion = ?, precio = ?, stock = ?, imagen = ?
+     SET nombre = ?, tipo = ?, coleccion = ?, categoria = ?, precio = ?, descripcion = ?, detalles = ?, imagen_frente = ?, imagen_atras = ?, codigo = ?, producto_relacionado = ?
      WHERE id = ?`
-    ).run(nombre, descripcion, precio, stock, imagen, id);
+    ).run(
+        nombre,
+        tipo,
+        coleccion,
+        categoria || "",
+        precio,
+        descripcion || "",
+        JSON.stringify(detallesArray),
+        imagenFrente,
+        imagenAtras,
+        codigo || "",
+        productoRelacionado || "",
+        id
+    );
 
     return NextResponse.json({ mensaje: "Producto actualizado" });
 }
 
-// DELETE /api/productos/5 → borra el producto con id 5
 export async function DELETE(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
